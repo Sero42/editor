@@ -1,0 +1,118 @@
+package folgen
+
+// Autor: St. Schmidt
+// Datum: 25.08.2020
+// Zweck: Implementierung des ADT Folge mit einer doppelt-verketteten
+//        mit Verwaltungsblock und mit Ringliste inklusive Dummy-Element
+
+//type Element rune
+
+import "reflect"
+
+type data struct {
+	laenge  uint
+	aktIndex uint
+	aktElement *knoten
+	anker     *knoten
+}
+
+type knoten struct {
+	inhalt    Element
+	naechster  *knoten
+	vorheriger *knoten
+}
+
+func New (e Element) *data {
+	var fptr *data
+	var kptr *knoten
+	kptr = new (knoten)
+	(*kptr).inhalt = e
+	(*kptr).naechster = kptr
+	(*kptr).vorheriger= kptr
+	fptr = new (data)
+	(*fptr).aktElement = kptr
+	(*fptr).anker     = kptr
+	return fptr
+}
+
+func (f *data)	Einfuegen (e Element) {
+	if reflect.TypeOf(e) == reflect.TypeOf ((*(*f).anker).inhalt) {
+		var kptr *knoten
+		kptr = new (knoten)										//	1
+		//neuen Knoten mit seinen Werten setzen ...
+		(*kptr).inhalt = e	//UNSAUBER bei nicht konreten DT	// 	1 --TODO
+		(*kptr).naechster  = (*f).aktElement                    // 	2
+		(*kptr).vorheriger = (*(*f).aktElement).vorheriger		//  3
+		//neuen Knoten 'einklinken'
+		(*(*(*f).aktElement).vorheriger).naechster= kptr        //  4
+		(*(*f).aktElement).vorheriger = kptr					//  5
+		//weitere Invarianten ...
+		(*f).aktIndex++											//  6
+		(*f).laenge++											//  7
+	}
+}
+	
+func (f *data) Positionieren (n uint) {
+	if n < (*f).laenge {
+		(*f).aktIndex = n
+	} else {
+		(*f).aktIndex = (*f).laenge
+	}
+	//nun noch den Zeiger 'aktuelles 'setzen ..
+	(*f).aktElement = (*f).anker
+	for i:= uint(0);i <= (*f).aktIndex;i++ {
+		(*f).aktElement = (*(*f).aktElement).naechster
+	}
+}
+
+func (f *data) AktuellerIndex () uint {
+	if (*f).aktIndex == (*f).laenge {
+		return (*f).laenge
+	} else {
+		return (*f).aktIndex
+	}
+}
+
+func (f *data) AktuellesElement () (e Element, ok bool) {
+	if (*f).aktIndex < (*f).laenge {
+		ok = true
+		e = (*(*f).aktElement).inhalt // Unsauber - TODO
+	} else {
+		ok = false
+		e = (*(*f).anker).inhalt // Unsauber für nicht konkrete DT - TODO
+	}
+	return
+}
+
+func (f *data) Vor () {
+	if (*f).aktIndex == (*f).laenge {
+		return
+	} else {
+		(*f).aktIndex++
+		(*f).aktElement = (*(*f).aktElement).naechster
+	}
+}	
+
+func (f *data) Zurueck () {
+	if (*f).aktIndex == 0 {
+		return
+	} else {
+		(*f).aktIndex--
+		(*f).aktElement = (*(*f).aktElement).vorheriger
+	}
+}
+
+func (f *data) Loeschen () {
+	if (*f).laenge == (*f).aktIndex { //kein akt. Element: Nichts zu tun --- Schritt 1
+		return
+	} else { // Es gibt ein aktuelles Element ...
+		(*(*(*f).aktElement).vorheriger).naechster = (*(*f).aktElement).naechster  //  2
+		(*(*(*f).aktElement).naechster).vorheriger = (*(*f).aktElement).vorheriger //  3
+		(*f).aktElement = (*(*f).aktElement).naechster   // 4
+		(*f).laenge--  // 5
+	}
+}
+
+func (f *data) Laenge () uint {
+	return (*f).laenge
+}
